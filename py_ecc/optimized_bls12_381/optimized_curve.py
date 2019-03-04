@@ -10,6 +10,8 @@ from .optimized_field_elements import (
     field_modulus,
 )
 
+from typing import TypeVar
+
 
 curve_order = 52435875175126190479447740508185965837690552500527637822603658699938581184513
 
@@ -48,14 +50,16 @@ Z1 = (FQ.one(), FQ.one(), FQ.zero())
 # Point at infinity for twisted curve over FQ2
 Z2 = (FQ2.one(), FQ2.one(), FQ2.zero())
 
+F = TypeVar("F")
+
 
 # Check if a point is the point at infinity
-def is_inf(pt):
+def is_inf(pt: F) -> bool:
     return pt[-1] == pt[-1].__class__.zero()
 
 
 # Check that a point is on the curve defined by y**2 == x**3 + b
-def is_on_curve(pt, b):
+def is_on_curve(pt: F, b: F) -> bool:
     if is_inf(pt):
         return True
     x, y, z = pt
@@ -67,7 +71,7 @@ assert is_on_curve(G2, b2)
 
 
 # Elliptic curve doubling
-def double(pt):
+def double(pt: F) -> F:
     x, y, z = pt
     W = 3 * x * x
     S = y * z
@@ -81,7 +85,7 @@ def double(pt):
 
 
 # Elliptic curve addition
-def add(p1, p2):
+def add(p1: F, p2: F) -> F:
     one, zero = p1[0].__class__.one(), p1[0].__class__.zero()
     if p1[2] == zero or p2[2] == zero:
         return p1 if p2[2] == zero else p2
@@ -109,7 +113,7 @@ def add(p1, p2):
 
 
 # Elliptic curve point multiplication
-def multiply(pt, n):
+def multiply(pt: F, n: int) -> F:
     if n == 0:
         return (pt[0].__class__.one(), pt[0].__class__.one(), pt[0].__class__.zero())
     elif n == 1:
@@ -120,7 +124,7 @@ def multiply(pt, n):
         return add(multiply(double(pt), int(n // 2)), pt)
 
 
-def eq(p1, p2):
+def eq(p1: F, p2: F) -> bool:
     x1, y1, z1 = p1
     x2, y2, z2 = p2
     return x1 * z2 == x2 * z1 and y1 * z2 == y2 * z1
@@ -136,12 +140,12 @@ w = FQ12([0, 1] + [0] * 10)
 
 
 # Convert P => -P
-def neg(pt):
+def neg(pt: F) -> F:
     x, y, z = pt
     return (x, -y, z)
 
 
-def twist(pt):
+def twist(pt: F) -> F:
     _x, _y, _z = pt
     # Field isomorphism from Z[p] / x**2 to Z[p] / x**2 - 2*x + 2
     xcoeffs = [_x.coeffs[0] - _x.coeffs[1], _x.coeffs[1]]
