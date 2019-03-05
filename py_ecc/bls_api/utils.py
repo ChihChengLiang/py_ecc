@@ -1,16 +1,19 @@
-from typing import (  # noqa: F401
-    Dict,
-    Sequence,
-    Tuple,
-    Union,
+from eth_typing import (
+    BLSPubkey,
+    BLSSignature,
+    Hash32,
 )
-
 from eth_utils import (
     big_endian_to_int,
 )
+
+from py_ecc.fields import (
+    optimized_bls12_381_FQ as FQ,
+    optimized_bls12_381_FQ2 as FQ2,
+)
 from py_ecc.optimized_bls12_381 import (
-    FQ,
-    FQ2,
+    Z1,
+    Z2,
     b,
     b2,
     field_modulus as q,
@@ -18,42 +21,29 @@ from py_ecc.optimized_bls12_381 import (
     is_on_curve,
     multiply,
     normalize,
-    Z1,
-    Z2,
 )
 
-from .hash import (
-    hash_eth2,
-)
-from .typing import (
-    BLSPubkey,
-    BLSSignature,
-    G1Compressed,
-    G1Uncompressed,
-    G2Compressed,
-    G2Uncompressed,
-    Hash32,
-)
 from .constants import (
     POW_2_381,
     POW_2_382,
     POW_2_383,
+    FQ2_order,
+    G2_cofactor,
+    eighth_roots_of_unity,
 )
-
-G2_cofactor = 305502333931268344200999753193121504214466019254188142667664032982267604182971884026507427359259977847832272839041616661285803823378372096355777062779109  # noqa: E501
-FQ2_order = q ** 2 - 1
-eighth_roots_of_unity = [
-    FQ2([1, 1]) ** ((FQ2_order * k) // 8)
-    for k in range(8)
-]
-
+from .hash import (
+    hash_eth2,
+)
+from .typing import (
+    G1Compressed,
+    G1Uncompressed,
+    G2Compressed,
+    G2Uncompressed,
+)
 
 #
 # Helpers
 #
-
-def coerce_to_int(element: Union[int, FQ]) -> int:
-    return element if isinstance(element, int) else element.n
 
 
 def modular_squareroot(value: FQ2) -> FQ2:
@@ -69,8 +59,8 @@ def modular_squareroot(value: FQ2) -> FQ2:
     if check in eighth_roots_of_unity[::2]:
         x1 = candidate_squareroot / eighth_roots_of_unity[eighth_roots_of_unity.index(check) // 2]
         x2 = -x1
-        x1_re, x1_im = coerce_to_int(x1.coeffs[0]), coerce_to_int(x1.coeffs[1])
-        x2_re, x2_im = coerce_to_int(x2.coeffs[0]), coerce_to_int(x2.coeffs[1])
+        x1_re, x1_im = x1.coeffs
+        x2_re, x2_im = x2.coeffs
         return x1 if (x1_im > x2_im or (x1_im == x2_im and x1_re > x2_re)) else x2
     return None
 

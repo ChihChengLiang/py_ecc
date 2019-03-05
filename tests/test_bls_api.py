@@ -1,6 +1,8 @@
 from eth_utils import (
     big_endian_to_int,
 )
+import pytest
+
 from py_ecc.bls_api.api import (
     aggregate_pubkeys,
     aggregate_signatures,
@@ -21,8 +23,10 @@ from py_ecc.bls_api.utils import (
     hash_to_G2,
     signature_to_G2,
 )
+from py_ecc.fields import (
+    optimized_bls12_381_FQ2 as FQ2,
+)
 from py_ecc.optimized_bls12_381 import (
-    FQ2,
     G1,
     G2,
     b2,
@@ -30,7 +34,6 @@ from py_ecc.optimized_bls12_381 import (
     multiply,
     normalize,
 )
-import pytest
 
 
 @pytest.mark.parametrize(
