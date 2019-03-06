@@ -98,26 +98,30 @@ def hash_to_G2(message_hash: Hash32, domain: int) -> G2Uncompressed:
 #
 def compress_G1(pt: G1Uncompressed) -> G1Compressed:
     """
-    A compressed point in group G1 is 384-bit with the order (c_flag, b_flag, a_flag, x),
-    where c_flag is always 1,
-    b_flag indicates infinity,
-    a_flag depends on y, and
-    x is the x-coordinate of the point.
+    A compressed point is a 384-bit integer with the bit order (c_flag, b_flag, a_flag, x),
+    where the c_flag bit is always set to 1,
+    the b_flag bit indicates infinity when set to 1,
+    the a_flag bit helps determine the y-coordinate when decompressing,
+    and the 381-bit integer x is the x-coordinate of the point.
     """
     if is_inf(pt):
-        # set c_flag = 1 and b_flag = 1, leave a_flag = x = 0
+        # Set c_flag = 1 and b_flag = 1. leave a_flag = x = 0
         return G1Compressed(POW_2_383 + POW_2_382)
     else:
         x, y = normalize(pt)
         # Record y's leftmost bit to the a_flag
         a_flag = (y.n * 2) // q
-        # set c_flag = 1 and b_flag = 0
+        # Set c_flag = 1 and b_flag = 0
         return G1Compressed(x.n + a_flag * POW_2_381 + POW_2_383)
 
 
 def decompress_G1(z: G1Compressed) -> G1Uncompressed:
-    # The case b_flag == 1, indicating the infinity point
-    if (z % POW_2_383) // POW_2_382 == 1:
+    """
+    Recovers x and y coordinates from the compressed point.
+    """
+    # b_flag == 1 indicates the infinity point
+    b_flag = (z % POW_2_383) // POW_2_382
+    if b_flag == 1:
         return G1Uncompressed(Z1)
     x = z % POW_2_381
 
@@ -151,6 +155,16 @@ def pubkey_to_G1(pubkey: BLSPubkey) -> G1Uncompressed:
 
 
 def compress_G2(pt: G2Uncompressed) -> G2Compressed:
+    """
+    The compressed point (z1, z2) has the bit order:
+    z1: (c_flag1, b_flag1, a_flag1, x1)
+    z2: (c_flag2, b_flag2, a_flag2, x2)
+    where
+    - c_flag1 is always set to 1
+    - b_flag1 indicates infinity when set to 1
+    - a_flag1 helps determine the y-coordinate when decompressing,
+    - a_flag2, b_flag2, and c_flag2 are always set to 0
+    """
     if not is_on_curve(pt, b2):
         raise ValueError(
             "The given point is not on the twisted curve over FQ**2"
@@ -170,10 +184,16 @@ def compress_G2(pt: G2Uncompressed) -> G2Compressed:
 
 
 def decompress_G2(p: G2Compressed) -> G2Uncompressed:
+    """
+    Recovers x and y coordinates from the compressed point (z1, z2).
+    """
     z1, z2 = p
-    # check b_flag1 for infinity
-    if (z1 % POW_2_383) // POW_2_382 == 1:
+
+    # b_flag == 1 indicates the infinity point
+    b_flag1 = (z1 % POW_2_383) // POW_2_382
+    if b_flag1 == 1:
         return G2Uncompressed(Z2)
+
     x1 = z1 % POW_2_381
     x2 = z2
     x = FQ2([x1, x2])

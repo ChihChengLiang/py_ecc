@@ -65,7 +65,7 @@ def test_hash_to_G2():
 
 def test_decompress_G2_with_no_modular_square_root_found():
     with pytest.raises(ValueError, match="Failed to find a modular squareroot"):
-        decompress_G2(signature_to_G2(b'\x11' * 96))
+        signature_to_G2(b'\x11' * 96)
 
 
 @pytest.mark.parametrize(
