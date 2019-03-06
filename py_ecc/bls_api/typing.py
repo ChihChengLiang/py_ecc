@@ -1,6 +1,3 @@
-# This module will not be included in the PR.
-# These types should be replaced with those in eth-typing
-
 from typing import (
     NewType,
     Tuple,
