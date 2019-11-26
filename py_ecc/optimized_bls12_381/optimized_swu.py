@@ -23,11 +23,10 @@ from .constants import (
 # Found in Section 4 of https://eprint.iacr.org/2019/403
 def optimized_swu_G2(t: FQ2) -> Tuple[FQ2, FQ2, FQ2]:
     t2 = t ** 2
-    temp = ISO_3_Z * t2
-    temp = temp + temp ** 2
-    denominator = -(ISO_3_A * temp)  # -a(Z * t^2 + Z^2 * t^4)
-    temp = temp + FQ2.one()
-    numerator = ISO_3_B * temp  # b(Z * t^2 + Z^2 * t^4 + 1)
+    iso_3_z_t2 = ISO_3_Z * t2
+    zt2_z2t4 = iso_3_z_t2 + iso_3_z_t2 ** 2
+    denominator = -(ISO_3_A * zt2_z2t4)  # -a(Z * t^2 + Z^2 * t^4)
+    numerator = ISO_3_B * (zt2_z2t4 + FQ2.one())  # b(Z * t^2 + Z^2 * t^4 + 1)
 
     # Exceptional case
     if denominator == FQ2.zero():
@@ -39,38 +38,31 @@ def optimized_swu_G2(t: FQ2) -> Tuple[FQ2, FQ2, FQ2]:
     u = (numerator ** 3) + (ISO_3_A * numerator * (denominator ** 2)) + (ISO_3_B * v)
 
     # Attempt y = sqrt(u / v)
-    (success, sqrt_candidate) = sqrt_division_FQ2(u, v)
-    y = sqrt_candidate
-
-    # Handle case where (u / v) is not square
-    # sqrt_candidate(x1) = sqrt_candidate(x0) * t^3
-    sqrt_candidate = sqrt_candidate * t ** 3
-
-    # u(x1) = Z^3 * t^6 * u(x0)
-    u = (ISO_3_Z * t2) ** 3 * u
-    success_2 = False
-    etas = ETAS
-    for (i, eta) in enumerate(etas):
-        # Valid solution if (eta * sqrt_candidate(x1)) ** 2 * v - u == 0
-        temp1 = eta * sqrt_candidate
-        temp1 = temp1 ** 2 * v - u
-        if temp1 == FQ2.zero() and not success and not success_2:
-            y = sqrt_candidate * eta
-            success_2 = True
+    (success, alpha) = sqrt_division_FQ2(u, v)
+    if success:
+        y = alpha if t.sgn0_be() == alpha.sgn0_be() else -alpha
+        return (numerator, y * denominator, denominator)
     else:
-        if not success and not success_2:
-            # Unreachable
-            raise Exception("Hash to Curve - Optimized SWU failure")
+        # Handle case where (u / v) is not square
+        # sqrt_candidate(x1) = sqrt_candidate(x0) * t^3
+        alpha_t3 = alpha * t ** 3
 
-    if not success:
-        numerator = numerator * t2 * ISO_3_Z
-
-    if t.sgn0_be() != y.sgn0_be():
-        y = -y
-
-    y = y * denominator
-
-    return (numerator, y, denominator)
+        # u(x1) = Z^3 * t^6 * u(x0)
+        u_x1 = iso_3_z_t2 ** 3 * u
+        success_2 = False
+        for eta in ETAS:
+            # Valid solution if (eta * sqrt_candidate(x1)) ** 2 * v - u == 0
+            eta_alpha_t3 = eta * alpha_t3
+            determinant = eta_alpha_t3 ** 2 * v - u_x1
+            if determinant == FQ2.zero() and not success_2:
+                y = eta_alpha_t3
+                success_2 = True
+        else:
+            if not success and not success_2:
+                # Unreachable
+                raise Exception("Hash to Curve - Optimized SWU failure")
+        y = y if t.sgn0_be() == y.sgn0_be() else -y
+        return (numerator * iso_3_z_t2, y * denominator, denominator)
 
 
 # Square Root Division
